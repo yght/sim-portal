@@ -46,3 +46,15 @@ export const selectSelectedSim = createSelector(
   selectSimState,
   state => (state.selectedIccid ? state.entities[state.selectedIccid] || null : null)
 );
+
+/**
+ * Which SIMs have a command in flight. The list uses this to show a spinner
+ * on the row rather than freezing the whole table.
+ */
+export const selectPendingIccids = createSelector(
+  selectSimState,
+  state => Object.keys(state.pending)
+);
+
+export const selectIsPending = (iccid: string) =>
+  createSelector(selectSimState, state => Boolean(state.pending[iccid]));
