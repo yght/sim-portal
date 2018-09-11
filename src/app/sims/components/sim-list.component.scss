@@ -1,0 +1,40 @@
+.sim-list {
+  &__header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+  }
+
+  &__search {
+    min-width: 20rem;
+    padding: 0.5rem 0.75rem;
+  }
+}
+
+.sim-table {
+  width: 100%;
+  border-collapse: collapse;
+
+  &__row {
+    cursor: pointer;
+
+    &:hover { background: #f5f7fa; }
+    &--busy { opacity: 0.6; pointer-events: none; }
+  }
+
+  &__iccid { font-family: "SF Mono", Menlo, monospace; }
+  &__empty { text-align: center; padding: 2rem; color: #6b7280; }
+}
+
+.badge {
+  display: inline-block;
+  padding: 0.15rem 0.5rem;
+  border-radius: 0.75rem;
+  font-size: 0.8125rem;
+
+  &--ok      { background: #d1fae5; color: #065f46; }
+  &--warn    { background: #fef3c7; color: #92400e; }
+  &--pending { background: #dbeafe; color: #1e40af; }
+  &--dead    { background: #e5e7eb; color: #4b5563; }
+  &--neutral { background: #f3f4f6; color: #374151; }
+}

@@ -1,0 +1,41 @@
+<div class="sim-list">
+  <header class="sim-list__header">
+    <h1>SIMs</h1>
+    <input
+      class="sim-list__search"
+      type="search"
+      [formControl]="search"
+      placeholder="Search by ICCID or phone number"
+      aria-label="Search SIMs by ICCID or phone number">
+  </header>
+
+  <div class="sim-list__loading" *ngIf="loading$ | async">Loading SIMs&hellip;</div>
+
+  <table class="sim-table" *ngIf="(sims$ | async) as sims">
+    <thead>
+      <tr>
+        <th scope="col">ICCID</th>
+        <th scope="col">Number</th>
+        <th scope="col">Carrier</th>
+        <th scope="col">Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let sim of sims; trackBy: trackByIccid"
+          (click)="onSelect(sim)"
+          class="sim-table__row"
+          [class.sim-table__row--busy]="(pending$ | async).indexOf(sim.iccid) !== -1">
+        <td class="sim-table__iccid">{{ sim.iccid }}</td>
+        <td>{{ sim.msisdn || '—' }}</td>
+        <td>{{ sim.carrier | uppercase }}</td>
+        <td>
+          <span class="badge" [ngClass]="badgeFor(sim.state)">{{ labelFor(sim.state) }}</span>
+          <span class="spinner" *ngIf="isTransitional(sim.state)" aria-label="Waiting for carrier"></span>
+        </td>
+      </tr>
+      <tr *ngIf="sims.length === 0">
+        <td colspan="4" class="sim-table__empty">No SIMs match that search.</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
