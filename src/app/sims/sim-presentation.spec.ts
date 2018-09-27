@@ -1,5 +1,11 @@
 import { Sim, SimState } from './sim.model';
-import { labelFor, badgeFor, isTransitional, availableActions } from './sim-presentation';
+import {
+  labelFor,
+  badgeFor,
+  isTransitional,
+  availableActions,
+  explainUnavailable
+} from './sim-presentation';
 import { Scopes } from '../core/permissions';
 
 function sim(state: SimState, extra: Partial<Sim> = {}): Sim {
@@ -85,5 +91,33 @@ describe('available actions', () => {
   it('lets admin do anything the state allows', () => {
     const s = sim('SUSPENDED', { suspensionReason: 'FRAUD' });
     expect(availableActions(s, [Scopes.ADMIN]).sort()).toEqual(['RESUME', 'TERMINATE']);
+  });
+});
+
+describe('explaining a missing button', () => {
+  it('blames the carrier while a change is in flight', () => {
+    expect(explainUnavailable(sim('ACTIVATING'), 'SUSPEND', AGENT))
+      .toBe('Waiting for the carrier to confirm the previous change.');
+  });
+
+  it('explains the fraud rule rather than saying permission denied', () => {
+    const s = sim('SUSPENDED', { suspensionReason: 'FRAUD' });
+
+    expect(explainUnavailable(s, 'RESUME', AGENT))
+      .toBe('This line was suspended for fraud and needs an approver to resume.');
+  });
+
+  it('says it is the state when the state is the problem', () => {
+    expect(explainUnavailable(sim('TERMINATED'), 'SUSPEND', AGENT))
+      .toBe('Not available while the SIM is terminated.');
+  });
+
+  it('says it is permission when permission is the problem', () => {
+    expect(explainUnavailable(sim('ACTIVE'), 'SUSPEND', READ_ONLY))
+      .toBe('You do not have permission to do this.');
+  });
+
+  it('says nothing when the action is actually available', () => {
+    expect(explainUnavailable(sim('ACTIVE'), 'SUSPEND', AGENT)).toBeNull();
   });
 });

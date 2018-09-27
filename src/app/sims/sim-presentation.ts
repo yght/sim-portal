@@ -86,3 +86,26 @@ export function availableActions(sim: Sim, heldScopes: string[]): SimAction[] {
     return true;
   });
 }
+
+/**
+ * Why an action an agent expected to see is missing. Support asked for this
+ * after the third ticket about the Resume button "disappearing".
+ */
+export function explainUnavailable(sim: Sim, action: SimAction, heldScopes: string[]): string | null {
+  if (availableActions(sim, heldScopes).indexOf(action) !== -1) {
+    return null;
+  }
+
+  if ((TRANSITIONS[sim.state] || []).indexOf(action) === -1) {
+    if (isTransitional(sim.state)) {
+      return 'Waiting for the carrier to confirm the previous change.';
+    }
+    return 'Not available while the SIM is ' + labelFor(sim.state).toLowerCase() + '.';
+  }
+
+  if (action === 'RESUME' && sim.suspensionReason === 'FRAUD') {
+    return 'This line was suspended for fraud and needs an approver to resume.';
+  }
+
+  return 'You do not have permission to do this.';
+}

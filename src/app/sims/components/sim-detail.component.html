@@ -1,0 +1,39 @@
+<section class="sim-detail" *ngIf="(sim$ | async) as sim; else nothing">
+  <div class="banner banner--error" *ngIf="error$ | async as error" role="alert">
+    {{ error }}
+    <button type="button" (click)="dismiss()" aria-label="Dismiss">&times;</button>
+  </div>
+
+  <h2>{{ sim.msisdn || sim.iccid }}</h2>
+
+  <dl class="sim-detail__facts">
+    <dt>ICCID</dt><dd>{{ sim.iccid }}</dd>
+    <dt>Carrier</dt><dd>{{ sim.carrier | uppercase }}</dd>
+    <dt>Status</dt><dd>{{ labelFor(sim.state) }}</dd>
+    <dt *ngIf="sim.suspensionReason">Suspended because</dt>
+    <dd *ngIf="sim.suspensionReason">{{ sim.suspensionReason }}</dd>
+    <dt>Rate plan</dt><dd>{{ sim.ratePlanId || '—' }}</dd>
+  </dl>
+
+  <div class="sim-detail__actions" *ngIf="(actions$ | async) as allowed">
+    <button type="button"
+            [disabled]="allowed.indexOf('SUSPEND') === -1"
+            [title]="why(sim, 'SUSPEND')"
+            (click)="suspend(sim, 'CUSTOMER_REQUEST')">Suspend</button>
+
+    <button type="button"
+            [disabled]="allowed.indexOf('RESUME') === -1"
+            [title]="why(sim, 'RESUME')"
+            (click)="resume(sim)">Resume</button>
+
+    <button type="button"
+            class="danger"
+            [disabled]="allowed.indexOf('TERMINATE') === -1"
+            [title]="why(sim, 'TERMINATE')"
+            (click)="terminate(sim)">Terminate</button>
+  </div>
+</section>
+
+<ng-template #nothing>
+  <p class="sim-detail__empty">Select a SIM to see its details.</p>
+</ng-template>
