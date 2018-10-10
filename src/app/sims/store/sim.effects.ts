@@ -93,11 +93,32 @@ export class SimEffects {
 
 /**
  * Turn an API error into something worth showing an agent.
+ *
+ * The platform sends a canonical failure reason; use it when it is there.
+ * "Request failed with status code 503" helps nobody standing on a phone
+ * call with a customer.
  */
 function describe(err: any): string {
+  const reason = err && err.error && err.error.reason;
+
+  const FRIENDLY: { [k: string]: string } = {
+    CARRIER_UNAVAILABLE: 'The carrier is not responding. This will retry automatically.',
+    RATE_LIMITED: 'The carrier is rate limiting us. This will retry automatically.',
+    SIM_NOT_FOUND: 'The carrier does not have a record of this SIM.',
+    SIM_ALREADY_ACTIVE: 'The carrier already has this SIM active.',
+    INVALID_RATE_PLAN: 'That rate plan is not valid for this carrier.',
+    NO_NUMBERS_AVAILABLE: 'The carrier has no numbers left in this range.',
+    ACCOUNT_DELINQUENT: 'The account is past due and the carrier has blocked changes.',
+    INSUFFICIENT_SCOPE: 'You do not have permission to do this.'
+  };
+
+  if (reason && FRIENDLY[reason]) {
+    return FRIENDLY[reason];
+  }
+
   if (err && err.status === 0) {
     return 'Could not reach the platform. Check your connection.';
   }
 
-  return 'Something went wrong. Please try again.';
+  return 'Something went wrong. The platform team has been notified.';
 }
