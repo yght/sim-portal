@@ -121,3 +121,28 @@ describe('explaining a missing button', () => {
     expect(explainUnavailable(sim('ACTIVE'), 'SUSPEND', AGENT)).toBeNull();
   });
 });
+
+/**
+ * This block is the front end's half of a contract with the platform's state
+ * machine. If the backend adds a transition and nobody updates the portal, an
+ * agent gets a button that 409s; if the portal adds one the backend does not
+ * have, they get a button that does nothing. Encoding the backend's table
+ * here means the two cannot drift silently.
+ */
+describe('agreement with the platform state machine', () => {
+  const BACKEND_TRANSITIONS: { [K in SimState]: string[] } = {
+    PRE_ACTIVE: ['ACTIVATE', 'TERMINATE'],
+    ACTIVATING: [],
+    ACTIVE: ['SUSPEND', 'TERMINATE'],
+    SUSPENDED: ['RESUME', 'TERMINATE'],
+    TERMINATING: [],
+    TERMINATED: []
+  };
+
+  it('offers exactly what the backend accepts, for a fully privileged user', () => {
+    (Object.keys(BACKEND_TRANSITIONS) as SimState[]).forEach(state => {
+      const s = sim(state, { suspensionReason: state === 'SUSPENDED' ? 'NON_PAYMENT' : null });
+      expect(availableActions(s, [Scopes.ADMIN]).sort()).toEqual(BACKEND_TRANSITIONS[state].sort());
+    });
+  });
+});
