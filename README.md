@@ -1,7 +1,14 @@
 # sim-portal
 
 The support portal for the multi-carrier SIM platform. Angular 6, NgRx, Auth0.
-This is the front end for the SIM platform.
+This is the front end for [sim-platform](https://github.com/yght/sim-platform).
+
+> **About this repository.** This is a sanitised reconstruction of a portal I
+> built in 2018. The original talks to live carrier APIs and real customer
+> records, so it cannot be published. The state model, the permission rules
+> and the interaction decisions are the real ones; the code was rewritten
+> against a stub API so it could be shared. Happy to walk through the
+> original in a screen share.
 
 ## The problem
 
@@ -79,13 +86,24 @@ objects. Components subscribe and dispatch; they hold no logic of their own.
 
 ```bash
 npm install
-npm start       # ng serve, on http://localhost:4200
-npm test        # 38 tests
+npm test        # 38 tests against the real NgRx 6 and RxJS 6
 ```
 
-Point `apiUrl` in `src/environments/environment.ts` at a running
-[sim-platform](https://github.com/yght/sim-platform), and fill in the Auth0
-tenant details.
+The tests run on current Node. They exercise the reducer, selectors and
+presentation rules against the actual 2018 libraries — NgRx 6.4.0, RxJS 6.3.3
+— not modern stand-ins.
+
+### What is not in this cut
+
+`ng serve` and `ng build` are not wired up here. Angular CLI 6 depends on a
+build chain (node-sass and its era of webpack) that does not install on
+current Node, and pinning the repository to Node 8 to preserve that felt like
+the wrong trade for something meant to be read. The application code is
+genuine Angular 6 and typechecks; the CLI scaffolding around it is not
+included.
+
+There are no credentials in this repository. `src/environments/environment.ts`
+carries placeholders.
 
 ## What I'd do differently now
 
@@ -100,3 +118,11 @@ tenant details.
   edge, so the messages can be localised — the original had French to ship.
 - **Typed store.** `Store<any>` throughout; NgRx 6 could do better than that
   even in 2018 and I should have taken the time.
+
+## Notes on the reconstruction
+
+The application code is written in the 2018 idiom on purpose: NgRx action
+classes with a type enum rather than `createAction` (which arrived in NgRx 8),
+`@Effect()` decorators rather than `createEffect`, module-based components
+rather than standalone. The test runner is current, because a repository that
+cannot be cloned and tested is not much use to a reader.
