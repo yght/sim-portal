@@ -1,128 +1,108 @@
 # sim-portal
 
-The support portal for the multi-carrier SIM platform. Angular 6, NgRx, Auth0.
-This is the front end for [sim-platform](https://github.com/yght/sim-platform).
+Angular 6 + NgRx support portal for the multi-carrier SIM platform. The back
+end is [sim-platform](https://github.com/yght/sim-platform).
 
-> **About this repository.** This is a sanitised reconstruction of a portal I
-> built in 2018. The original talks to live carrier APIs and real customer
-> records, so it cannot be published. The state model, the permission rules
-> and the interaction decisions are the real ones; the code was rewritten
-> against a stub API so it could be shared. Happy to walk through the
-> original in a screen share.
+*This is a cleaned-up rebuild. The original runs against live carrier APIs and
+real customer records so it can't be published — the state model, the
+permission rules and the interaction decisions are the real ones, rewritten
+against a stub API. Happy to walk through the original on a call.*
 
-## The problem
+## What the support team actually needed
 
-A support agent has a customer on the phone. The customer's data has stopped
-working. The agent needs to see what the SIM is doing and, usually, suspend or
-resume it — without knowing or caring that the line sits on Bell rather than
-Vodafone, and without waiting eight seconds for a carrier round trip while the
-customer listens to them breathe.
+Someone is on the phone. Their data has stopped working. The agent needs to
+see what the SIM is doing and, nine times out of ten, suspend it or bring it
+back — without caring whether the line sits on Bell, Vodafone or AT&T, and
+without listening to dead air for eight seconds while a carrier thinks about
+it.
 
-Three things follow from that:
+Three things fall out of that, and they drove most of the design.
 
-- **The portal must never offer a button that will fail.** Every 409 an agent
-  hits is a support ticket about the support tool. So the front end carries
-  its own copy of the platform's transition rules, and a test that pins the
-  two together.
-- **Commands have to feel instant.** Carrier calls take seconds. The UI
-  applies the change immediately and rolls back if the carrier refuses.
-- **Rolling back has to hit the right record.** An agent working a queue
-  fires a command and moves on. When the failure arrives they are three SIMs
-  away, so the failure carries its own ICCID rather than assuming the
-  selection is still where it was.
+**Never show a button that's going to fail.** Every 409 an agent hits becomes
+a support ticket about the support tool, which is a special kind of annoying.
+So the front end carries its own copy of the platform's transition rules, and
+a test that pins the two together.
 
-## Architecture
+**Commands have to feel instant.** Carrier calls take seconds. The UI applies
+the change straight away and puts it back if the carrier says no.
+
+**Put the right thing back.** An agent fires a command and moves on down the
+queue. By the time a failure arrives they're three SIMs away, so the failure
+carries its own ICCID rather than trusting whatever happens to be selected.
+That one was a bug before it was a design decision.
+
+## Layout
+
+Components dispatch and subscribe. They hold nothing. The reducer, the
+selectors and the presentation rules are plain functions over plain objects,
+which is why the tests need no TestBed and no browser.
 
 ```
-  ┌──────────────┐   dispatch    ┌───────────────┐
-  │  Components  │──────────────▶│  NgRx Store   │
-  │  list/detail │◀──────────────│   (reducer)   │
-  └──────────────┘   select      └───────┬───────┘
-                                         │ actions
-                                         ▼
-                                 ┌───────────────┐
-                                 │    Effects    │
-                                 └───────┬───────┘
-                                         │
-                          ┌──────────────┴─────────────┐
-                          ▼                            ▼
-                  ┌───────────────┐            ┌──────────────┐
-                  │  SimService   │            │ AuthService  │
-                  │  (HttpClient) │            │   (Auth0)    │
-                  └───────┬───────┘            └──────────────┘
-                          │  Bearer token added by interceptor
-                          ▼
-                  ┌───────────────────┐
-                  │   sim-platform    │
-                  └───────────────────┘
+Components ──dispatch──▶ Store ──▶ Effects ──▶ SimService ──▶ sim-platform
+     ▲                     │                        │
+     └──────select─────────┘                   AuthService (Auth0)
 ```
 
-Same shape as the backend: **the logic worth testing is pure.** The reducer,
-the selectors and the presentation rules are plain functions over plain
-objects. Components subscribe and dispatch; they hold no logic of their own.
+`sims/store/sim.reducer.ts` is the one to read — optimistic commands and
+rollback. `sims/sim-presentation.ts` decides what an agent is allowed to see
+and do. `core/auth.service.ts` holds the Auth0 session, in memory only.
 
-## What's in here
+## The rules the UI has to know
 
-| Path | What it is |
-|---|---|
-| `sims/store/sim.reducer.ts` | Optimistic commands and rollback. The interesting file. |
-| `sims/sim-presentation.ts` | State → label, badge, and which actions are offered. |
-| `sims/store/sim.selectors.ts` | Derived views, including the search filter. |
-| `sims/store/sim.effects.ts` | Carrier calls, and turning API errors into English. |
-| `core/auth.service.ts` | Auth0 session. Token in memory, never localStorage. |
-| `core/auth.interceptor.ts` | Attaches the bearer token to platform calls only. |
+The portal duplicates the platform's transition table. It has to: it can't ask
+the server what's legal for a SIM without a round trip per row.
 
-## Decisions worth arguing about
+The fraud rule is the one worth mentioning. A line suspended for fraud does
+not come back because somebody clicked Resume — the API demands an approver.
+So the portal only shows Resume to someone who can be that approver, and when
+it's hidden the button explains why rather than sitting there greyed out with
+no reason given. That came out of the third ticket in a month about the button
+"disappearing".
 
-1. **[NgRx for a portal this size](docs/adr/0001-ngrx-for-shared-state.md)** —
-   a real question, since the store is a lot of ceremony for a table and a
-   detail pane. The optimistic-rollback requirement is what settled it.
-2. **[Optimistic updates with rollback](docs/adr/0002-optimistic-updates.md)** —
-   and why the failure action carries its own ICCID.
-3. **[Access token in memory](docs/adr/0003-token-in-memory.md)** — not
-   localStorage, because this token can terminate phone lines.
+There's a test (`agreement with the platform state machine`) that encodes the
+backend's table and asserts the portal offers exactly that. It exists because
+we added TERMINATE from PRE_ACTIVE server-side, forgot the portal, and left
+inventory SIMs unscrappable from the UI for a fortnight.
+
+## Three decisions, written up
+
+* [NgRx for state this size](docs/adr/0001-ngrx-for-shared-state.md) — genuinely arguable, and rollback settled it
+* [Optimistic updates](docs/adr/0002-optimistic-updates.md) — including why the failure carries an ICCID
+* [Token in memory, not localStorage](docs/adr/0003-token-in-memory.md) — this token can kill phone lines
 
 ## Running it
 
 ```bash
 npm install
-npm test        # 38 tests against the real NgRx 6 and RxJS 6
+npm test
 ```
 
-The tests run on current Node. They exercise the reducer, selectors and
-presentation rules against the actual 2018 libraries — NgRx 6.4.0, RxJS 6.3.3
-— not modern stand-ins.
+38 tests against the real NgRx 6.1.2 and RxJS 6.2.2, not modern stand-ins.
 
-### What is not in this cut
+`ng serve` and `ng build` aren't wired up. Angular CLI 6 drags in a build chain
+that won't install on current Node, and pinning the repo to Node 8 to keep it
+seemed a bad trade for something meant to be read. The application code is
+genuine Angular 6 and it typechecks. No credentials anywhere;
+`src/environments/environment.ts` has placeholders.
 
-`ng serve` and `ng build` are not wired up here. Angular CLI 6 depends on a
-build chain (node-sass and its era of webpack) that does not install on
-current Node, and pinning the repository to Node 8 to preserve that felt like
-the wrong trade for something meant to be read. The application code is
-genuine Angular 6 and typechecks; the CLI scaffolding around it is not
-included.
+## Known problems
 
-There are no credentials in this repository. `src/environments/environment.ts`
-carries placeholders.
+The duplicated transition table is a liability. There's a test holding the two
+ends together, but that test spells out the backend's rules by hand — so it
+catches drift in the portal and not in the platform. One machine-readable
+definition that both sides generate from is the real answer.
 
-## What I'd do differently now
+`Store<any>` throughout. NgRx 6 could do better than that even in 2018 and I
+should have spent the afternoon on it.
 
-- **The duplicated transition table is a liability.** `sim-presentation.ts`
-  restates the backend's state machine, and a test pins them together — but
-  that test encodes the backend's rules by hand, so it catches drift in the
-  portal and not in the platform. The right answer is one machine-readable
-  definition both sides generate from.
-- **`combineLatest` in the detail component** re-emits on every scope change,
-  which is almost never. Harmless, but `withLatestFrom` says what is meant.
-- **Errors are strings in the store.** They should be codes, translated at the
-  edge, so the messages can be localised — the original had French to ship.
-- **Typed store.** `Store<any>` throughout; NgRx 6 could do better than that
-  even in 2018 and I should have taken the time.
+Errors are stored as strings. They should be codes translated at the edge; the
+original had French to ship and that made it awkward.
 
-## Notes on the reconstruction
+`combineLatest` in the detail component re-emits on every scope change, which
+is approximately never. Harmless, but `withLatestFrom` says what I meant.
 
-The application code is written in the 2018 idiom on purpose: NgRx action
-classes with a type enum rather than `createAction` (which arrived in NgRx 8),
-`@Effect()` decorators rather than `createEffect`, module-based components
-rather than standalone. The test runner is current, because a repository that
-cannot be cloned and tested is not much use to a reader.
+## About the rebuild
+
+Written in the 2018 idiom deliberately: NgRx action classes with a type enum
+rather than `createAction` (NgRx 8), `@Effect()` rather than `createEffect`,
+module-based components. Test runner is current so the thing actually runs.
