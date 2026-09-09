@@ -8,6 +8,19 @@ real customer records so it can't be published — the state model, the
 permission rules and the interaction decisions are the real ones, rewritten
 against a stub API. Happy to walk through the original on a call.*
 
+## What I want to demonstrate
+
+I want to show how I translate backend rules into a responsive support workflow in Angular and NgRx.
+
+- **Frontend architecture:** components, effects, reducers and presentation rules with separate responsibilities.
+- **State management:** optimistic updates and rollback against the correct SIM.
+- **Customer impact:** clear actions and feedback help an agent handle a customer's service problem without navigating carrier-specific behaviour.
+- **Access-aware UX:** available actions reflect permissions and lifecycle rules; server-side authorization remains necessary.
+
+**Start here:** [SIM reducer](src/app/sims/store/sim.reducer.ts), [presentation rules](src/app/sims/sim-presentation.ts), and [reducer tests](src/app/sims/store/sim.reducer.spec.ts).
+
+**Scope:** an Angular source and test sample. A browser demo and Angular CLI build are not included. The transition-agreement test uses a manually copied backend table, rather than a live cross-repository contract.
+
 ## What the support team actually needed
 
 Someone is on the phone. Their data has stopped working. The agent needs to
