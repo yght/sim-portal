@@ -13,7 +13,7 @@
     "@angular/core": "6.1.10",
     "@angular/forms": "6.1.10",
     "@angular/platform-browser": "6.1.10",
-    "@angular/router": "6.1.10",
+    "@angular/router": "22.1.6",
     "@ngrx/effects": "6.1.2",
     "@ngrx/store": "6.1.2",
     "rxjs": "6.2.2",
