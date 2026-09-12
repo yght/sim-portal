@@ -119,3 +119,9 @@ is approximately never. Harmless, but `withLatestFrom` says what I meant.
 Written in the 2018 idiom deliberately: NgRx action classes with a type enum
 rather than `createAction` (NgRx 8), `@Effect()` rather than `createEffect`,
 module-based components. Test runner is current so the thing actually runs.
+
+## Engineering practices
+
+[Contribution and verification guide](CONTRIBUTING.md) · [Review template](.github/pull_request_template.md)
+
+This Angular 6 source sample has no runnable browser build. The copied transition-table test is not a cross-repository contract test.

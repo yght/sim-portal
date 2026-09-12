@@ -5,7 +5,8 @@
   "description": "Support portal for the multi-carrier SIM platform",
   "scripts": {
     "test": "jest",
-    "test:watch": "jest --watch"
+    "test:watch": "jest --watch",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@angular/common": "6.1.10",
