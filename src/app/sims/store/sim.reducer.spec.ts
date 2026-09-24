@@ -207,3 +207,45 @@ describe('search', () => {
     expect(visible('99999', sim(A, 'ACTIVE'))).toHaveLength(0);
   });
 });
+
+describe('refresh during an optimistic command', () => {
+  function pending() {
+    return simReducer(loaded(sim(A, 'ACTIVE'), sim(B, 'ACTIVE')),
+      new actions.SuspendSim({ iccid: A, reason: 'NON_PAYMENT' }));
+  }
+
+  it('keeps the pending row while refreshing unrelated rows', () => {
+    const before = pending();
+    const next = simReducer(before, new actions.LoadSimsSuccess({
+      sims: [sim(A, 'ACTIVE'), sim(B, 'SUSPENDED')]
+    }));
+    expect(next.entities[A]).toBe(before.entities[A]);
+    expect(next.entities[B].state).toBe('SUSPENDED');
+    expect(next.pending[A]).toBe(before.pending[A]);
+    expect(before.entities[B].state).toBe('ACTIVE');
+  });
+
+  it('retains an omitted pending row and can still roll back', () => {
+    const refreshed = simReducer(pending(), new actions.LoadSimsSuccess({ sims: [] }));
+    expect(refreshed.ids).toEqual([A]);
+    const failed = simReducer(refreshed, new actions.CommandFailure({
+      iccid: A, action: 'SUSPEND', reason: 'carrier rejected'
+    }));
+    expect(failed.entities[A].state).toBe('ACTIVE');
+    expect(failed.pending[A]).toBeUndefined();
+  });
+
+  it('lets command confirmation replace the retained optimistic row', () => {
+    const refreshed = simReducer(pending(), new actions.LoadSimsSuccess({ sims: [] }));
+    const confirmed = sim(A, 'SUSPENDED', { suspensionReason: 'NON_PAYMENT' });
+    const next = simReducer(refreshed, new actions.CommandSuccess({ sim: confirmed }));
+    expect(next.entities[A]).toBe(confirmed);
+    expect(next.pending[A]).toBeUndefined();
+  });
+
+  it('deduplicates repeated rows in the list response', () => {
+    const next = loaded(sim(A, 'ACTIVE'), sim(A, 'SUSPENDED'));
+    expect(next.ids).toEqual([A]);
+    expect(next.entities[A].state).toBe('SUSPENDED');
+  });
+});

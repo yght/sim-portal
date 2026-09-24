@@ -100,7 +100,16 @@ export function simReducer(
 
       action.payload.sims.forEach(sim => {
         entities[sim.iccid] = sim;
-        ids.push(sim.iccid);
+        if (ids.indexOf(sim.iccid) === -1) ids.push(sim.iccid);
+      });
+
+      // A list refresh is not a command acknowledgement. Retain in-flight
+      // rows even when the response omits them, until success or rollback.
+      Object.keys(state.pending).forEach(iccid => {
+        if (state.entities[iccid]) {
+          entities[iccid] = state.entities[iccid];
+          if (ids.indexOf(iccid) === -1) ids.push(iccid);
+        }
       });
 
       return { ...state, entities, ids, loading: false, error: null };

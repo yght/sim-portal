@@ -125,3 +125,15 @@ module-based components. Test runner is current so the thing actually runs.
 [Contribution and verification guide](CONTRIBUTING.md) · [Review template](.github/pull_request_template.md)
 
 This Angular 6 source sample has no runnable browser build. The copied transition-table test is not a cross-repository contract test.
+
+## Refreshing during optimistic commands
+
+NgRx list refreshes preserve pending SIM rows and their rollback snapshots.
+Unrelated rows still refresh, duplicate ICCIDs produce one list entry, and a
+pending row omitted from the response remains visible until the command settles.
+A command response, rather than a list refresh, confirms the optimistic state.
+
+Tests cover refresh/command ordering, omission, rollback and confirmation.
+The policy assumes one command per SIM at a time; request correlation and
+server-side concurrency control remain separate concerns. Run
+`npm test -- --runInBand` and `npm run typecheck`.
